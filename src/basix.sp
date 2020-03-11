@@ -23,6 +23,10 @@
 #include <geoip>
 #include <cstrike>
 #pragma tabsize 0
+#define CS_TEAM_NONE        0   /**< No team yet. */
+#define CS_TEAM_SPECTATOR   1  /**< Spectators. */
+#define CS_TEAM_T       2 /**< Terrorists. */
+#define CS_TEAM_CT      3 /**< Counter-Terrorists. */ 
 
 new Handle:h_connectmsg = INVALID_HANDLE;
 new Handle:h_disconnectmsg = INVALID_HANDLE;
@@ -58,10 +62,51 @@ public void OnPluginStart()
 	HookEvent("round_start", OnRoundStart, EventHookMode_PostNoCopy);
 	HookEvent("round_end", OnRoundEnd, EventHookMode_PostNoCopy);
 	
+	/* Listener */
+	
+	AddCommandListener(Listener_JoinTeam, "jointeam") 
+	
 	/* Register Commands */
 	
 	RegConsoleCmd("switch", side_switch);
 	RegConsoleCmd("stay", side_stay);
+}
+
+public Action Listener_JoinTeam(int client, const char[] command, int args) {
+	int clientTeam = GetClientTeam(client);
+	PrintToChatAll("\x04TEAM: %d", clientTeam);
+	if(GetClientTeam(client) == 0) {
+		if( GetClientCount(true) < 10 && wins_t == 0 && wins_ct == 0 && kniferound_happened == false) {
+	  		int currPlayerCount;
+	  		currPlayerCount = GetClientCount(true);
+			PrintToChatAll("Wating till all players are connected! Currently: %d / 10",currPlayerCount);
+	  	} else if(GetClientCount(true) == 10 && wins_t == 0 && wins_ct == 0 && kniferound_happened == false) {
+			PrintHintTextToAll("!!! Game starting !!!");
+			ServerCommand("exec kniferound.cfg");
+			HookEvent("round_end", KnifeEnded, EventHookMode_PostNoCopy);
+			PrintToChatAll("\x10!!! KNIFE !!!\x01");
+			PrintToChatAll("\x10!!! KNIFE !!!\x01");
+			PrintToChatAll("\x10!!! KNIFE !!!\x01");	
+	  	}
+	  	
+	  	new Connect = GetConVarInt(h_connectmsg);
+		if(Connect == 1)
+		{
+			new String:name[99], String:authid[99], String:IP[99], String:Country[99];
+			GetClientName(client, name, sizeof(name));	
+			GetClientAuthId(client, AuthId_Steam2, authid, sizeof(authid));
+			GetClientIP(client, IP, sizeof(IP), true);
+			PrintToServer("==> New connect from [%s]",IP);
+	    if(!GeoipCountry(IP, Country, sizeof Country))
+	    {
+	        Country = "Unknown Country";
+	    }
+	        PrintToChatAll(" \x10[CONNECT]\x01 %s has joined the server from [%s]", name, Country);     
+	    } else {
+	    CloseHandle(h_connectmsg);
+	   }
+	   
+	}
 }
 
 public Action side_switch(int client, int args) {
@@ -77,6 +122,8 @@ public Action side_switch(int client, int args) {
 		PrintToChatAll("\x10!!! LIVE !!!\x01");
 	} else if(sidevote_active && GetClientTeam(client) != knifeWinnerTeam) {
 		PrintHintText(client,"You are not in the team that won the knife round! Vote ignored.")	
+	} else if(!sidevote_active) {
+		PrintHintText(client, "\x02Nothing to vote at the moment!");
 	}
 	
 }
@@ -92,18 +139,20 @@ public Action side_stay(int client, int args) {
 		PrintToChatAll("\x10!!! LIVE !!!\x01");
 	} else if(sidevote_active && GetClientTeam(client) != knifeWinnerTeam) {
 		PrintHintText(client,"You are not in the team that won the knife round! Vote ignored.")	
+	} else if(!sidevote_active) {
+		PrintHintText(client, "\x02Nothing to vote at the moment!");
 	}
 	
 }
 
 public OnRoundStart(Handle:event, const String:name[], bool:dontBroadcast) {
 	/* Get Scores */
-	wins_t = CS_GetTeamScore(0);
-	wins_ct = CS_GetTeamScore(1);
-	/* Print Credits, Server-Info, ... whatever */
-	PrintToChatAll("\x10[STATSHOW]\x06 (%s) vs (%s)\x01",wins_t,wins_ct);
+	wins_t = CS_GetTeamScore(CS_TEAM_T);
+	wins_ct = CS_GetTeamScore(CS_TEAM_CT);
+	
 	/* Check if the current round is the first of the game */
-	if(wins_t == 0 && wins_ct == 0 && kniferound_happened == false) {
+	/*
+	if(GetClientCount(true) == 10 && wins_t == 0 && wins_ct == 0 && kniferound_happened == false) {
 		ServerCommand("exec kniferound.cfg");
 		HookEvent("round_end", KnifeEnded, EventHookMode_PostNoCopy);
 		PrintToChatAll("\x10!!! KNIFE !!!\x01");
@@ -112,6 +161,7 @@ public OnRoundStart(Handle:event, const String:name[], bool:dontBroadcast) {
 	} else if(wins_t == 0 && wins_ct == 0 && kniferound_happened == true) {
 		UnhookEvent("round_end", KnifeEnded, EventHookMode_PostNoCopy);
 	}
+	*/
 } 
 public KnifeEnded(Handle:event, const String:name[], bool:dontBroadcast) {
 	knifeWinnerTeam = GetEventInt(event, "winner");
@@ -128,7 +178,11 @@ public KnifeEnded(Handle:event, const String:name[], bool:dontBroadcast) {
 		PrintToChatAll("ERROR! Winning Team couldn't be detected!");}
 	}
 public OnRoundEnd(Handle:event, const String:name[], bool:dontBroadcast) {
-	
+	/* Get Scores */
+	wins_t = CS_GetTeamScore(CS_TEAM_T);
+	wins_ct = CS_GetTeamScore(CS_TEAM_CT);
+	/* stats */
+	PrintToChatAll(" \x10[STATSHOW] \x07%d\x01 vs \x0C%d",wins_t,wins_ct);
 }
 
 /*
@@ -139,22 +193,7 @@ public OnRoundEnd(Handle:event, const String:name[], bool:dontBroadcast) {
 
 public OnClientPutInServer(client)
 {
-	new Connect = GetConVarInt(h_connectmsg);
-	if(Connect == 1)
-	{
-		new String:name[99], String:authid[99], String:IP[99], String:Country[99];
-		GetClientName(client, name, sizeof(name));	
-		GetClientAuthId(client, AuthId_Steam2, authid, sizeof(authid));
-		GetClientIP(client, IP, sizeof(IP), true);
-		PrintToServer("==> New connect from [%s]",IP);
-    if(!GeoipCountry(IP, Country, sizeof Country))
-    {
-        Country = "Unknown Country";
-    }  
-        PrintToChatAll(" \x10[CONNECT]\x01 %s (%s) has joined the server from [%s]", name, authid, Country);     
-    } else {
-    CloseHandle(h_connectmsg);
-   }
+	
 }
 public OnClientDisconnect(client)
 {
@@ -169,7 +208,7 @@ public OnClientDisconnect(client)
     {
         Country = "Unknown Country";
     }  
-        PrintToChatAll(" \x10[DISCONNECT]\x01 %s (%s) has left the server from [%s]", name, authid, Country);     
+        PrintToChatAll(" \x10[DISCONNECT]\x01 %s has left the server from [%s]", name, Country);     
     } else {  
     CloseHandle(h_disconnectmsg);
 }
@@ -179,24 +218,11 @@ public void OnMapStart() {
 	ServerCommand("exec basix_gamestart.cfg");
 	new String:map[99], String:displayName[99];
 	GetMapDisplayName(map, displayName, sizeof displayName);
-	PrintToChatAll("Now playing on [%s]", displayName);
-	wins_t = CS_GetTeamScore(0);
-	wins_ct = CS_GetTeamScore(1);
+	PrintToChatAll("Now playing on %s", displayName);
+	wins_t = CS_GetTeamScore(CS_TEAM_T);
+	wins_ct = CS_GetTeamScore(CS_TEAM_CT);
 }
 
 public OnClientAuthorized(client, const String:auth[]){
-  	if( GetClientCount() < 10 && wins_t == 0 && wins_ct == 0) {
-  		new String:currPlayerCount[99];
-  		currPlayerCount[GetClientCount()];
-		PrintToChatAll("Wating till all players are connected! Currently: [%s] / 10",currPlayerCount);
-  	} else {
-  		if(wins_t == 0 && wins_ct == 0) {
-  			PrintHintTextToAll("!!! Game starting !!!");
-   			ServerCommand("exec kniferound.cfg");
-			HookEvent("round_end", KnifeEnded, EventHookMode_PostNoCopy);
-			PrintToChatAll("\x10!!! KNIFE !!!\x01");
-			PrintToChatAll("\x10!!! KNIFE !!!\x01");
-			PrintToChatAll("\x10!!! KNIFE !!!\x01");
-  		}
-  	}
+  	
 }
