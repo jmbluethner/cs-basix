@@ -16,6 +16,7 @@
  *
  * Useful DEV Sources:
  * - https://forums.alliedmods.net/image-proxy/cb170eefb344e7490ac18ab8c28e02c67d91017b/68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f4d6974636844697a7a6c652f53696d706c6541647665727469736d656e74732f6d61737465722f636f6c6f72732e706e67
+ * - https://forums.alliedmods.net/showthread.php?t=261263
  *
  */
 
@@ -33,13 +34,13 @@ new Handle:h_disconnectmsg = INVALID_HANDLE;
 
 public bool kniferound_happened = false;
 public bool sidevote_active = false;
+public bool gamepause_active = false;
 
 public int knifeWinnerTeam;
 public int wins_t;
 public int wins_ct;
  
-public Plugin myinfo =
-{
+public Plugin myinfo = {
 	name = "BasiX",
 	author = "NIGHTTIMEDEV",
 	description = "All you need for propper 5v5 Matchmaking",
@@ -47,8 +48,7 @@ public Plugin myinfo =
 	url = "https://github.com/nighttimedev/cs-basix"
 };
 
-public void OnPluginStart()
-{
+public void OnPluginStart() {
 	h_connectmsg = CreateConVar("sm_connectmsg", "1", "Shows a connect message in the chat once a player joins.", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	h_disconnectmsg = CreateConVar("sm_disconnectmsg", "1", "Shows a disconnect message in the chat once a player leaves.", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	
@@ -65,6 +65,8 @@ public void OnPluginStart()
 	
 	RegConsoleCmd("switch", side_switch);
 	RegConsoleCmd("stay", side_stay);
+	RegConsoleCmd("pause", pause_match);
+	RegConsoleCmd("unpause", unpause_match);
 }
 
 public Action Listener_JoinTeam(int client, const char[] command, int args) {
@@ -102,6 +104,24 @@ public Action Listener_JoinTeam(int client, const char[] command, int args) {
 	}
 }
 
+public Action pause_match(int client, int args) {
+	if(!gamepause_active) {
+		new String:name[99];
+		ServerCommand("mp_pause_match");
+		GetClientName(client, name, sizeof(name));
+		PrintToChatAll("%s triggered a game pause!",name);
+		gamepause_active = 1;
+	}
+	PrintHintText(client,"A pause has already been triggered!");
+}
+public Action unpause_match(int client, int args) {
+	if(!gamepause_active) {
+		PrintHintText(client,"There is no scheduled pause!");
+	} else {
+		// Both teams need to !unpause
+		// Check if pause was set by admin or players
+	}
+}
 public Action side_switch(int client, int args) {
 	char full[256];
 	GetCmdArgString(full, sizeof(full));
@@ -118,8 +138,8 @@ public Action side_switch(int client, int args) {
 	} else if(!sidevote_active) {
 		PrintHintText(client, "\x02Nothing to vote at the moment!");
 	}
-	
 }
+
 public Action side_stay(int client, int args) {
 	char full[256];
 	GetCmdArgString(full, sizeof(full));
@@ -135,7 +155,6 @@ public Action side_stay(int client, int args) {
 	} else if(!sidevote_active) {
 		PrintHintText(client, "\x02Nothing to vote at the moment!");
 	}
-	
 }
 
 public OnRoundStart(Handle:event, const String:name[], bool:dontBroadcast) {
@@ -156,6 +175,7 @@ public OnRoundStart(Handle:event, const String:name[], bool:dontBroadcast) {
 	}
 	*/
 } 
+
 public KnifeEnded(Handle:event, const String:name[], bool:dontBroadcast) {
 	knifeWinnerTeam = GetEventInt(event, "winner");
 	if(knifeWinnerTeam == 2) {
@@ -187,6 +207,7 @@ public OnRoundEnd(Handle:event, const String:name[], bool:dontBroadcast) {
 public OnClientPutInServer(client) {
 	
 }
+
 public OnClientDisconnect(client) {
 	new Disconnect = GetConVarInt(h_disconnectmsg);
 	if(Disconnect == 1)	{
@@ -205,6 +226,8 @@ public OnClientDisconnect(client) {
 }
 
 public void OnMapStart() {
+	kniferound_happened = false;
+
 	PrintToServer("-------------------------");
 	PrintToServer(".");
 	PrintToServer(". BasiX Plugin loaded!");
