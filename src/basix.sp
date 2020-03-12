@@ -59,7 +59,7 @@ public void OnPluginStart() {
 	
 	/* Listener */
 	
-	AddCommandListener(Listener_JoinTeam, "jointeam") 
+	AddCommandListener(Listener_JoinTeam, "jointeam");
 	
 	/* Register Commands */
 	
