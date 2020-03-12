@@ -24,9 +24,9 @@
 #include <cstrike>
 #pragma tabsize 0
 #define CS_TEAM_NONE        0   /**< No team yet. */
-#define CS_TEAM_SPECTATOR   1  /**< Spectators. */
-#define CS_TEAM_T       2 /**< Terrorists. */
-#define CS_TEAM_CT      3 /**< Counter-Terrorists. */ 
+#define CS_TEAM_SPECTATOR   1  	/**< Spectators. */
+#define CS_TEAM_T       	2 	/**< Terrorists. */
+#define CS_TEAM_CT      	3 	/**< Counter-Terrorists. */ 
 
 new Handle:h_connectmsg = INVALID_HANDLE;
 new Handle:h_disconnectmsg = INVALID_HANDLE;
@@ -49,11 +49,6 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	PrintToServer("-------------------------");
-	PrintToServer(".");
-	PrintToServer(". BasiX Plugin loaded!");
-	PrintToServer(".");
-	PrintToServer("-------------------------");
 	h_connectmsg = CreateConVar("sm_connectmsg", "1", "Shows a connect message in the chat once a player joins.", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	h_disconnectmsg = CreateConVar("sm_disconnectmsg", "1", "Shows a disconnect message in the chat once a player leaves.", FCVAR_NOTIFY | FCVAR_DONTRECORD);
 	
@@ -82,7 +77,7 @@ public Action Listener_JoinTeam(int client, const char[] command, int args) {
 			PrintToChatAll("Wating till all players are connected! Currently: %d / 10",currPlayerCount);
 	  	} else if(GetClientCount(true) == 10 && wins_t == 0 && wins_ct == 0 && kniferound_happened == false) {
 			PrintHintTextToAll("!!! Game starting !!!");
-			ServerCommand("exec kniferound.cfg");
+			ServerCommand("exec knife.cfg");
 			HookEvent("round_end", KnifeEnded, EventHookMode_PostNoCopy);
 			PrintToChatAll("\x10!!! KNIFE !!!\x01");
 			PrintToChatAll("\x10!!! KNIFE !!!\x01");
@@ -90,21 +85,19 @@ public Action Listener_JoinTeam(int client, const char[] command, int args) {
 	  	}
 	  	
 	  	new Connect = GetConVarInt(h_connectmsg);
-		if(Connect == 1)
-		{
+		if(Connect == 1) {
 			new String:name[99], String:authid[99], String:IP[99], String:Country[99];
 			GetClientName(client, name, sizeof(name));	
 			GetClientAuthId(client, AuthId_Steam2, authid, sizeof(authid));
 			GetClientIP(client, IP, sizeof(IP), true);
 			PrintToServer("==> New connect from [%s]",IP);
-	    if(!GeoipCountry(IP, Country, sizeof Country))
-	    {
+	    if(!GeoipCountry(IP, Country, sizeof Country)) {
 	        Country = "Unknown Country";
 	    }
-	        PrintToChatAll(" \x10[CONNECT]\x01 %s has joined the server from [%s]", name, Country);     
+	    PrintToChatAll(" \x10[CONNECT]\x01 %s has joined the server from [%s]", name, Country);     
 	    } else {
 	    CloseHandle(h_connectmsg);
-	   }
+	   	}
 	   
 	}
 }
@@ -191,36 +184,42 @@ public OnRoundEnd(Handle:event, const String:name[], bool:dontBroadcast) {
  * Log client IP to server console
  */
 
-public OnClientPutInServer(client)
-{
+public OnClientPutInServer(client) {
 	
 }
-public OnClientDisconnect(client)
-{
+public OnClientDisconnect(client) {
 	new Disconnect = GetConVarInt(h_disconnectmsg);
-	if(Disconnect == 1)	
-	{
+	if(Disconnect == 1)	{
 		new String:name[99], String:authid[99], String:IP[99], String:Country[99];	
 		GetClientName(client, name, sizeof(name));	
 		GetClientAuthId(client, AuthId_Steam2, authid, sizeof(authid));	
 		GetClientIP(client, IP, sizeof(IP), true);	
-	if(!GeoipCountry(IP, Country, sizeof Country))	
-    {
-        Country = "Unknown Country";
-    }  
-        PrintToChatAll(" \x10[DISCONNECT]\x01 %s has left the server from [%s]", name, Country);     
-    } else {  
-    CloseHandle(h_disconnectmsg);
-}
+		if(!GeoipCountry(IP, Country, sizeof Country))	
+		{
+			Country = "Unknown Country";
+		}  
+			PrintToChatAll(" \x10[DISCONNECT]\x01 %s has left the server from [%s]", name, Country);     
+		} else {  
+		CloseHandle(h_disconnectmsg);
+	}
 }
 
 public void OnMapStart() {
+	PrintToServer("-------------------------");
+	PrintToServer(".");
+	PrintToServer(". BasiX Plugin loaded!");
+	PrintToServer(".");
+	PrintToServer("-------------------------");
+
 	ServerCommand("exec basix_gamestart.cfg");
+
 	new String:map[99], String:displayName[99];
-	GetMapDisplayName(map, displayName, sizeof displayName);
+	GetMapDisplayName(map, displayName, sizeof(displayName));
 	PrintToChatAll("Now playing on %s", displayName);
+	/*
 	wins_t = CS_GetTeamScore(CS_TEAM_T);
 	wins_ct = CS_GetTeamScore(CS_TEAM_CT);
+	*/
 }
 
 public OnClientAuthorized(client, const String:auth[]){
