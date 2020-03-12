@@ -24,8 +24,7 @@ mainround.cfg | - Reset default secondary weapons (removed by knife.cfg)<br>- Re
 - Install sourcemod + metamod (tutorials are available on YouTube)
 - Compile /src/basix.sp (use spider.limetech.io)
 
-    Make sure to compile the .sp file! There might already be a compiled .smx in the /src folder, but that can be outdated, modified or even corrupted!  
-    {: .alert .alert-danger}
+> <span style="color:red"><b>Make sure to compile the .sp file!</b> There might already be a compiled .smx in the /src folder, but that can be outdated, modified or even corrupted!</span>
 
 - Move the compiled .smx to /addons/sourcemod/plugins on your server
 - Move all files from /cfg to /csgo/cfg on your server
