@@ -23,6 +23,8 @@
 #include <sourcemod>
 #include <geoip>
 #include <cstrike>
+#include <sdktools>
+#include <sdktools_gamerules>
 #pragma tabsize 0
 #define CS_TEAM_NONE        0   /**< No team yet. */
 #define CS_TEAM_SPECTATOR   1  	/**< Spectators. */
@@ -65,14 +67,18 @@ public void OnPluginStart() {
 	
 	RegConsoleCmd("switch", side_switch);
 	RegConsoleCmd("stay", side_stay);
-	RegConsoleCmd("pause", pause_match);
-	RegConsoleCmd("unpause", unpause_match);
+	RegConsoleCmd("sm_pause", pause_match);
+	RegConsoleCmd("sm_unpause", unpause_match);
+	RegConsoleCmd("playercount", playercount);
+	//RegConsoleCmd("help",cmd_help);
 }
 
 public Action Listener_JoinTeam(int client, const char[] command, int args) {
+	/*
 	int clientTeam = GetClientTeam(client);
 	PrintToChatAll("\x04TEAM: %d", clientTeam);
-	if(GetClientTeam(client) == 0) {
+	*/
+	if(GetClientTeam(client) == CS_TEAM_CT || GetClientTeam(client) == CS_TEAM_T) {
 		if( GetClientCount(true) < 10 && wins_t == 0 && wins_ct == 0 && kniferound_happened == false) {
 	  		int currPlayerCount;
 	  		currPlayerCount = GetClientCount(true);
@@ -100,21 +106,46 @@ public Action Listener_JoinTeam(int client, const char[] command, int args) {
 	    } else {
 	    CloseHandle(h_connectmsg);
 	   	}
-	   
 	}
 }
 
-public Action pause_match(int client, int args) {
-	if(!gamepause_active) {
+/*
+public Action cmd_help(int client, int args) {
+	char full[256];
+	new String:name[99];
+	GetCmdArgString(full, sizeof(full));
+	GetClientName(client, name, sizeof(name));
+	PrintToChatAll("%d is a pussy and needs help",name);
+}
+*/
+
+public Action playercount(int client, int args) {
+	char full[256];
+	GetCmdArgString(full, sizeof(full));
+	int playerCount = GetTeamClientCount(CS_TEAM_T) + GetTeamClientCount(CS_TEAM_T);
+	int clientCount = GetClientCount(true);
+	PrintToChatAll("[CLIENT COUNT] Currently %d // %d Players",playerCount,clientCount);
+}
+
+public Action:pause_match(int client, int args) {
+	char full[256];
+	GetCmdArgString(full, sizeof(full));
+	if(!gamepause_active && GameRules_GetProp("m_bWarmupPeriod") == 0) {
 		new String:name[99];
 		ServerCommand("mp_pause_match");
 		GetClientName(client, name, sizeof(name));
 		PrintToChatAll("%s triggered a game pause!",name);
-		gamepause_active = 1;
+		gamepause_active = true;
+	} else if(gamepause_active) {
+		PrintHintText(client,"A pause has already been triggered!");
+	} else if(GameRules_GetProp("m_bWarmupPeriod") == 1) {
+		PrintHintText(client,"Can't start pause during warmup!");
 	}
-	PrintHintText(client,"A pause has already been triggered!");
 }
-public Action unpause_match(int client, int args) {
+
+public Action:unpause_match(int client, int args) {
+	char full[256];
+	GetCmdArgString(full, sizeof(full));
 	if(!gamepause_active) {
 		PrintHintText(client,"There is no scheduled pause!");
 	} else {
@@ -122,6 +153,7 @@ public Action unpause_match(int client, int args) {
 		// Check if pause was set by admin or players
 	}
 }
+
 public Action side_switch(int client, int args) {
 	char full[256];
 	GetCmdArgString(full, sizeof(full));
@@ -136,7 +168,7 @@ public Action side_switch(int client, int args) {
 	} else if(sidevote_active && GetClientTeam(client) != knifeWinnerTeam) {
 		PrintHintText(client,"You are not in the team that won the knife round! Vote ignored.")	
 	} else if(!sidevote_active) {
-		PrintHintText(client, "\x02Nothing to vote at the moment!");
+		PrintHintText(client, "Nothing to vote at the moment!");
 	}
 }
 
@@ -153,27 +185,12 @@ public Action side_stay(int client, int args) {
 	} else if(sidevote_active && GetClientTeam(client) != knifeWinnerTeam) {
 		PrintHintText(client,"You are not in the team that won the knife round! Vote ignored.")	
 	} else if(!sidevote_active) {
-		PrintHintText(client, "\x02Nothing to vote at the moment!");
+		PrintHintText(client, "Nothing to vote at the moment!");
 	}
 }
 
 public OnRoundStart(Handle:event, const String:name[], bool:dontBroadcast) {
-	/* Get Scores */
-	wins_t = CS_GetTeamScore(CS_TEAM_T);
-	wins_ct = CS_GetTeamScore(CS_TEAM_CT);
 	
-	/* Check if the current round is the first of the game */
-	/*
-	if(GetClientCount(true) == 10 && wins_t == 0 && wins_ct == 0 && kniferound_happened == false) {
-		ServerCommand("exec kniferound.cfg");
-		HookEvent("round_end", KnifeEnded, EventHookMode_PostNoCopy);
-		PrintToChatAll("\x10!!! KNIFE !!!\x01");
-		PrintToChatAll("\x10!!! KNIFE !!!\x01");
-		PrintToChatAll("\x10!!! KNIFE !!!\x01");
-	} else if(wins_t == 0 && wins_ct == 0 && kniferound_happened == true) {
-		UnhookEvent("round_end", KnifeEnded, EventHookMode_PostNoCopy);
-	}
-	*/
 } 
 
 public KnifeEnded(Handle:event, const String:name[], bool:dontBroadcast) {
@@ -227,12 +244,16 @@ public OnClientDisconnect(client) {
 
 public void OnMapStart() {
 	kniferound_happened = false;
-
+	
+	PrintToServer("");
+	PrintToServer("");
 	PrintToServer("-------------------------");
-	PrintToServer(".");
-	PrintToServer(". BasiX Plugin loaded!");
-	PrintToServer(".");
+	PrintToServer("");
+	PrintToServer(" ! BasiX Plugin loaded ! ");
+	PrintToServer("");
 	PrintToServer("-------------------------");
+	PrintToServer("");
+	PrintToServer("");
 
 	ServerCommand("exec basix_gamestart.cfg");
 
