@@ -18,6 +18,15 @@
  * - https://forums.alliedmods.net/image-proxy/cb170eefb344e7490ac18ab8c28e02c67d91017b/68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f4d6974636844697a7a6c652f53696d706c6541647665727469736d656e74732f6d61737465722f636f6c6f72732e706e67
  * - https://forums.alliedmods.net/showthread.php?t=261263
  *
+ * DEVELOPED FOR
+ *
+ *  ██████╗ ██╗      █████╗  ██████╗██╗  ██╗██╗      █████╗ ███╗   ██╗██████╗ 
+ *	██╔══██╗██║     ██╔══██╗██╔════╝██║ ██╔╝██║     ██╔══██╗████╗  ██║██╔══██╗
+ *	██████╔╝██║     ███████║██║     █████╔╝ ██║     ███████║██╔██╗ ██║██║  ██║
+ *	██╔══██╗██║     ██╔══██║██║     ██╔═██╗ ██║     ██╔══██║██║╚██╗██║██║  ██║
+ *	██████╔╝███████╗██║  ██║╚██████╗██║  ██╗███████╗██║  ██║██║ ╚████║██████╔╝
+ *	╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ 
+ *     black-land.de
  */
 
 #include <sourcemod>
@@ -25,7 +34,9 @@
 #include <cstrike>
 #include <sdktools>
 #include <sdktools_gamerules>
+
 #pragma tabsize 0
+
 #define CS_TEAM_NONE        0   /**< No team yet. */
 #define CS_TEAM_SPECTATOR   1  	/**< Spectators. */
 #define CS_TEAM_T       	2 	/**< Terrorists. */
@@ -102,9 +113,9 @@ public Action Listener_JoinTeam(int client, const char[] command, int args) {
 	    if(!GeoipCountry(IP, Country, sizeof Country)) {
 	        Country = "Unknown Country";
 	    }
-	    PrintToChatAll(" \x10[CONNECT]\x01 %s has joined the server from [%s]", name, Country);     
+	    PrintToChatAll(" \x10[CONNECT]\x01 %s has joined the server", name);     
 	    } else {
-	    CloseHandle(h_connectmsg);
+	    	CloseHandle(h_connectmsg);
 	   	}
 	}
 }
@@ -122,90 +133,117 @@ public Action cmd_help(int client, int args) {
 public Action playercount(int client, int args) {
 	char full[256];
 	GetCmdArgString(full, sizeof(full));
-	int playerCount = GetTeamClientCount(CS_TEAM_T) + GetTeamClientCount(CS_TEAM_T);
-	int clientCount = GetClientCount(true);
-	PrintToChatAll("[CLIENT COUNT] Currently %d // %d Players",playerCount,clientCount);
+
+	int count;
+	for(int i = 1; i <= MaxClients; i++)
+    {
+        if(IsClientInGame(i) && GetClientTeam(i) > 1)
+        {
+            count++
+        }
+    }
+    PrintToChatAll("[COUNT] %d Player",count);
+    
 }
 
 public Action:pause_match(int client, int args) {
 	char full[256];
 	GetCmdArgString(full, sizeof(full));
-	if(!gamepause_active && GameRules_GetProp("m_bWarmupPeriod") == 0) {
+	if(IsClientInGame(client) && GetClientTeam(client) > 1) {
+		if(!gamepause_active && GameRules_GetProp("m_bWarmupPeriod") == 0) {
 		new String:name[99];
 		ServerCommand("mp_pause_match");
 		GetClientName(client, name, sizeof(name));
 		PrintToChatAll("%s triggered a game pause!",name);
 		gamepause_active = true;
-	} else if(gamepause_active) {
-		PrintHintText(client,"A pause has already been triggered!");
-	} else if(GameRules_GetProp("m_bWarmupPeriod") == 1) {
-		PrintHintText(client,"Can't start pause during warmup!");
+		} else if(gamepause_active) {
+			PrintHintText(client,"A pause has already been triggered!");
+		} else if(GameRules_GetProp("m_bWarmupPeriod") == 1) {
+			PrintHintText(client,"Can't start pause during warmup!");
+		}
+	} else {
+		PrintHintText(client,"You can't use that command! It seems like you aren't an ingame player.");
 	}
 }
 
 public Action:unpause_match(int client, int args) {
 	char full[256];
 	GetCmdArgString(full, sizeof(full));
-	if(!gamepause_active) {
-		PrintHintText(client,"There is no scheduled pause!");
+	if(IsClientInGame(client) && GetClientTeam(client) > 1) {
+		if(!gamepause_active) {
+			PrintHintText(client,"There is no scheduled pause!");
+		} else {
+			// Both teams need to !unpause
+			// Check if pause was set by admin or players
+		}
 	} else {
-		// Both teams need to !unpause
-		// Check if pause was set by admin or players
+		PrintHintText(client,"You can't use that command! It seems like you aren't an ingame player.");
 	}
 }
 
 public Action side_switch(int client, int args) {
 	char full[256];
 	GetCmdArgString(full, sizeof(full));
-	if(sidevote_active && GetClientTeam(client) == knifeWinnerTeam) {
-		// swap teams & start main	
-		sidevote_active = false;
-		ServerCommand("mp_swapteams");
-		ServerCommand("exec mainround.cfg");
-		PrintToChatAll("\x10!!! LIVE !!!\x01");
-		PrintToChatAll("\x10!!! LIVE !!!\x01");
-		PrintToChatAll("\x10!!! LIVE !!!\x01");
-	} else if(sidevote_active && GetClientTeam(client) != knifeWinnerTeam) {
-		PrintHintText(client,"You are not in the team that won the knife round! Vote ignored.")	
-	} else if(!sidevote_active) {
-		PrintHintText(client, "Nothing to vote at the moment!");
+	if(IsClientInGame(client) && GetClientTeam(client) > 1) {
+		if(sidevote_active && GetClientTeam(client) == knifeWinnerTeam) {
+			// swap teams & start main	
+			sidevote_active = false;
+			ServerCommand("mp_swapteams");
+			ServerCommand("exec mainround.cfg");
+			PrintToChatAll("\x10!!! LIVE !!!\x01");
+			PrintToChatAll("\x10!!! LIVE !!!\x01");
+			PrintToChatAll("\x10!!! LIVE !!!\x01");
+		} else if(sidevote_active && GetClientTeam(client) != knifeWinnerTeam) {
+			PrintHintText(client,"You are not in the team that won the knife round! Vote ignored.")	
+		} else if(!sidevote_active) {
+			PrintHintText(client, "Nothing to vote at the moment!");
+		}
+	} else {
+		PrintHintText(client,"You can't use that command! It seems like you aren't an ingame player.");
 	}
 }
 
 public Action side_stay(int client, int args) {
 	char full[256];
 	GetCmdArgString(full, sizeof(full));
-	if(sidevote_active && GetClientTeam(client) == knifeWinnerTeam) {
-		// dont swap & start main
-		sidevote_active = false;
-		ServerCommand("exec mainround.cfg");
-		PrintToChatAll("\x10!!! LIVE !!!\x01");
-		PrintToChatAll("\x10!!! LIVE !!!\x01");
-		PrintToChatAll("\x10!!! LIVE !!!\x01");
-	} else if(sidevote_active && GetClientTeam(client) != knifeWinnerTeam) {
-		PrintHintText(client,"You are not in the team that won the knife round! Vote ignored.")	
-	} else if(!sidevote_active) {
-		PrintHintText(client, "Nothing to vote at the moment!");
+	if(IsClientInGame(client) && GetClientTeam(client) > 1) {
+		if(sidevote_active && GetClientTeam(client) == knifeWinnerTeam) {
+			// dont swap & start main
+			sidevote_active = false;
+			ServerCommand("exec mainround.cfg");
+			PrintToChatAll("\x10!!! LIVE !!!\x01");
+			PrintToChatAll("\x10!!! LIVE !!!\x01");
+			PrintToChatAll("\x10!!! LIVE !!!\x01");
+		} else if(sidevote_active && GetClientTeam(client) != knifeWinnerTeam) {
+			PrintHintText(client,"You are not in the team that won the knife round! Vote ignored.")	
+		} else if(!sidevote_active) {
+			PrintHintText(client, "Nothing to vote at the moment!");
+		}
+	} else {
+		PrintHintText(client,"You can't use that command! It seems like you aren't an ingame player.");
 	}
 }
 
 public OnRoundStart(Handle:event, const String:name[], bool:dontBroadcast) {
-	
+	PrintToChatAll(" \x04»»\x01 This match is being played on a \x0Dblack\x10LAN\x0Dd \x01 Server \x04««");
 } 
 
 public KnifeEnded(Handle:event, const String:name[], bool:dontBroadcast) {
+	UnhookEvent("round_end", KnifeEnded, EventHookMode_PostNoCopy);
+	kniferound_happened = true;
+	sidevote_active = true;
 	knifeWinnerTeam = GetEventInt(event, "winner");
+	PrintToChatAll("WINNING TEAM: %d",knifeWinnerTeam);
 	if(knifeWinnerTeam == 2) {
-		PrintToChatAll("Team 2 won!");
-		PrintToChatAll("The first message from that Team decides !switch or !stay");
+		PrintToChatAll(" \x10[BasiX]\x01 THE T's WON!");
+		PrintToChatAll(" \x10[BasiX]\x01 The first !switch / !stay from a random player of that Team decides!");
 		// receive & validate chat commands from team 2
-		
-} else if(knifeWinnerTeam == 1) {
-		PrintToChatAll("Team 1 won!");
-		PrintToChatAll("The first message from that Team decides !switch or !stay");
+	} else if(knifeWinnerTeam == 3) {
+		PrintToChatAll(" \x10[BasiX]\x01 THE CT's WON!");
+		PrintToChatAll(" \x10[BasiX]\x01 The first !switch / !stay from a random player of that Team decides!");
 		// receive & validate chat commands from team 1
 	} else {
-		PrintToChatAll("ERROR! Winning Team couldn't be detected!");}
+		PrintToChatAll(" \x02[ERROR!]\x01 Winning Team couldn't be detected!");}
 	}
 public OnRoundEnd(Handle:event, const String:name[], bool:dontBroadcast) {
 	/* Get Scores */
@@ -236,7 +274,7 @@ public OnClientDisconnect(client) {
 		{
 			Country = "Unknown Country";
 		}  
-			PrintToChatAll(" \x10[DISCONNECT]\x01 %s has left the server from [%s]", name, Country);     
+			PrintToChatAll(" \x10[DISCONNECT]\x01 %s has left the server", name);     
 		} else {  
 		CloseHandle(h_disconnectmsg);
 	}
@@ -259,7 +297,7 @@ public void OnMapStart() {
 
 	new String:map[99], String:displayName[99];
 	GetMapDisplayName(map, displayName, sizeof(displayName));
-	PrintToChatAll("Now playing on %s", displayName);
+	PrintToChatAll(" \x10[BasiX]\x01 Now playing on %s", displayName);
 	/*
 	wins_t = CS_GetTeamScore(CS_TEAM_T);
 	wins_ct = CS_GetTeamScore(CS_TEAM_CT);
