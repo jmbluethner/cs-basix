@@ -28,6 +28,13 @@ mainround.cfg | - Reset default secondary weapons (removed by knife.cfg)<br>- Re
 
 - Move the compiled .smx to /addons/sourcemod/plugins on your server
 - Move all files from /cfg to /csgo/cfg on your server
+
+### SQL Connection
+The plugin can connect to a SQL database. Just fill in your database information in /cfg/databases.cfg
+
 ### Usage  
+- Install the plugin as described above
+- Copy the config files
+- Done
 
 ### Commands  
